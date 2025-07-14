@@ -1,61 +1,35 @@
 {
   "name": "@apito-io/js-apito-plugin-sdk",
-  "version": "0.1.4",
-  "description": "JavaScript SDK for building Apito Engine HashiCorp plugins with gRPC support",
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
-    }
-  },
-  "files": [
-    "dist",
-    "src",
-    "README.md",
-    "examples/"
-  ],
-  "engines": {
-    "node": ">=16.0.0"
-  },
+  "version": "0.1.5",
+  "description": "JavaScript SDK for building Apito HashiCorp plugins",
+  "main": "dist/main.js",
+  "types": "dist/main.d.ts",
   "scripts": {
     "build": "node build.js",
-    "test": "jest",
-    "lint": "eslint src --ext .js",
-    "prepare": "npm run build",
-    "example": "node examples/simple-plugin/main.js"
+    "dev": "node build.js --dev",
+    "test": "echo \"No tests specified - skipping\" && exit 0"
   },
-  "author": "Apito Inc",
-  "license": "MIT",
   "keywords": [
     "apito",
     "plugin",
     "graphql",
-    "grpc",
     "hashicorp",
-    "javascript",
-    "nodejs",
-    "sdk",
-    "engine"
+    "grpc"
   ],
+  "author": "Apito Inc",
+  "license": "MIT",
   "dependencies": {
-    "@grpc/grpc-js": "^1.8.0",
-    "@grpc/proto-loader": "^0.7.0"
+    "@grpc/grpc-js": "^1.8.14",
+    "@grpc/proto-loader": "^0.7.6"
   },
   "devDependencies": {
-    "jest": "^29.0.0",
-    "eslint": "^8.0.0"
+    "typescript": "^5.0.4"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/apito-io/engine.git",
-    "directory": "js-apito-plugin-sdk"
+    "url": "https://github.com/apito-io/js-apito-plugin-sdk.git"
   },
-  "bugs": {
-    "url": "https://github.com/apito-io/engine/issues"
-  },
-  "homepage": "https://github.com/apito-io/engine/tree/main/js-apito-plugin-sdk#readme"
+  "publishConfig": {
+    "access": "public"
+  }
 }

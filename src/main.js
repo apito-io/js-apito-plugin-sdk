@@ -519,6 +519,8 @@ class Plugin {
             const context = request.context ? this.structToObject(request.context) : {};
 
             process.stderr.write(`SDK: Executing ${functionType}:${functionName}\n`);
+            process.stderr.write(`SDK: Raw args: ${JSON.stringify(request.args, null, 2)}\n`);
+            process.stderr.write(`SDK: Parsed args: ${JSON.stringify(args, null, 2)}\n`);
 
             let result;
             
@@ -532,15 +534,11 @@ class Plugin {
                 throw new Error(`Unknown function type: ${functionType}`);
             }
 
+            process.stderr.write(`SDK: Raw result: ${JSON.stringify(result, null, 2)}\n`);
+
             // Create the result as a structpb.Struct with a 'data' field
-            // This is what the engine expects to extract the actual result
-            const resultStruct = {
-                fields: {
-                    data: {
-                        stringValue: typeof result === 'string' ? result : JSON.stringify(result)
-                    }
-                }
-            };
+            // This matches what the Go plugins return and what the engine expects
+            const resultStruct = this.convertToProtobufStruct({ data: result });
 
             const response = {
                 success: true,
@@ -604,7 +602,13 @@ class Plugin {
 
     // Utility methods
     structToObject(struct) {
-        if (!struct || !struct.fields) {
+        if (!struct) {
+            process.stderr.write(`SDK: structToObject received null/undefined\n`);
+            return {};
+        }
+        
+        if (!struct.fields) {
+            process.stderr.write(`SDK: structToObject received struct without fields: ${JSON.stringify(struct)}\n`);
             return {};
         }
 
@@ -616,6 +620,10 @@ class Plugin {
     }
 
     valueToJS(value) {
+        if (!value) {
+            return null;
+        }
+        
         if (value.stringValue !== undefined) {
             return value.stringValue;
         } else if (value.numberValue !== undefined) {
@@ -624,10 +632,48 @@ class Plugin {
             return value.boolValue;
         } else if (value.structValue !== undefined) {
             return this.structToObject(value.structValue);
-        } else if (value.listValue !== undefined) {
+        } else if (value.listValue !== undefined && value.listValue.values) {
             return value.listValue.values.map(v => this.valueToJS(v));
-        } else {
+        } else if (value.nullValue !== undefined) {
             return null;
+        } else {
+            process.stderr.write(`SDK: Unknown value type: ${JSON.stringify(value)}\n`);
+            return null;
+        }
+    }
+
+    convertToProtobufStruct(data) {
+        const fields = {};
+        for (const [key, value] of Object.entries(data)) {
+            fields[key] = this.convertValueToProtobuf(value);
+        }
+        return { fields };
+    }
+
+    convertValueToProtobuf(value) {
+        if (value === null || value === undefined) {
+            return { nullValue: 0 };
+        } else if (typeof value === 'string') {
+            return { stringValue: value };
+        } else if (typeof value === 'number') {
+            return { numberValue: value };
+        } else if (typeof value === 'boolean') {
+            return { boolValue: value };
+        } else if (Array.isArray(value)) {
+            return {
+                listValue: {
+                    values: value.map(item => this.convertValueToProtobuf(item))
+                }
+            };
+        } else if (typeof value === 'object') {
+            const fields = {};
+            for (const [prop, propValue] of Object.entries(value)) {
+                fields[prop] = this.convertValueToProtobuf(propValue);
+            }
+            return { structValue: { fields } };
+        } else {
+            // Fallback to string representation
+            return { stringValue: String(value) };
         }
     }
 }
