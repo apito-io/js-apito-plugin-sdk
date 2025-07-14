@@ -261,8 +261,17 @@ class Plugin {
             // Create gRPC server
             this.server = new grpc.Server();
             
+            // Access the service from the proper package structure
+            const pluginService = this.protoDefinition.apito?.plugin?.v1?.PluginService || 
+                                   this.protoDefinition.PluginService;
+            
+            if (!pluginService) {
+                throw new Error('PluginService not found in protobuf definition. Available services: ' + 
+                               Object.keys(this.protoDefinition));
+            }
+
             // Add plugin service
-            this.server.addService(this.protoDefinition.PluginService.service, {
+            this.server.addService(pluginService.service, {
                 Init: this.handleInit.bind(this),
                 Migration: this.handleMigration.bind(this),
                 SchemaRegister: this.handleSchemaRegister.bind(this),
