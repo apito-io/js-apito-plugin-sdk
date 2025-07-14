@@ -678,12 +678,17 @@ class Plugin {
     }
 }
 
-// Export the Plugin class and init function
+// Import all helper functions
+const helpers = require('./helpers');
+
+// Export the Plugin class, init function, and all helpers
 module.exports = {
     Plugin,
     init: function(name, version, apiKey) {
         // Use stderr for initialization logs
         process.stderr.write(`SDK: Initializing plugin '${name}' v${version}\n`);
         return new Plugin(name, version, apiKey);
-    }
+    },
+    // Re-export all helper functions
+    ...helpers
 };

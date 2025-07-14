@@ -1,13 +1,14 @@
 {
   "name": "@apito-io/js-apito-plugin-sdk",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "JavaScript SDK for building Apito HashiCorp plugins",
   "main": "dist/main.js",
   "types": "dist/main.d.ts",
   "scripts": {
     "build": "node build.js",
     "dev": "node build.js --dev",
-    "test": "echo \"No tests specified - skipping\" && exit 0"
+    "test": "node test-handshake.js",
+    "test:handshake": "node test-handshake.js"
   },
   "keywords": [
     "apito",
