@@ -711,14 +711,29 @@ class Plugin {
 
             process.stderr.write(`SDK: Resolver returned: ${typeof result}\n`);
 
-            // Convert result to protobuf format
-            const protobufResult = this.convertToProtobufStruct({ data: result });
-            process.stderr.write(`SDK: Converted to protobuf struct\n`);
+            // Convert result to protobuf format - handle arrays and objects correctly
+            let protobufResult;
+            if (Array.isArray(result)) {
+                // For arrays, convert directly to protobuf value format
+                protobufResult = this.convertValueToProtobuf(result);
+            } else if (typeof result === 'object' && result !== null) {
+                // For objects, use struct format
+                protobufResult = this.convertToProtobufStruct(result);
+            } else {
+                // For primitives, convert to value format
+                protobufResult = this.convertValueToProtobuf(result);
+            }
+            process.stderr.write(`SDK: Converted to protobuf format\n`);
+
+            // Determine correct typeUrl based on result type
+            const typeUrl = Array.isArray(result) || typeof result !== 'object' || result === null
+                ? 'type.googleapis.com/google.protobuf.Value'
+                : 'type.googleapis.com/google.protobuf.Struct';
 
             callback(null, {
                 success: true,
                 result: {
-                    typeUrl: 'type.googleapis.com/google.protobuf.Struct',
+                    typeUrl: typeUrl,
                     value: Buffer.from(JSON.stringify(protobufResult))
                 },
                 error: ''

@@ -147,13 +147,30 @@ function FloatField(description) {
 
 /**
  * Create a List field
- * @param {string} itemType - Type of items in the list
+ * @param {string|Object} itemType - Type of items in the list (string for scalars, object for custom types)
  * @param {string} description - Field description
  * @returns {Object} List field definition
  */
 function ListField(itemType, description) {
+    let listItemType;
+    
+    if (typeof itemType === 'string') {
+        // Handle scalar types like 'String', 'Int', etc.
+        listItemType = createScalarType(itemType);
+    } else if (itemType && itemType.typeName && itemType.fields) {
+        // Handle object types created by NewObjectType - use proper object structure
+        listItemType = {
+            kind: 'object',
+            name: itemType.typeName,
+            fields: itemType.fields
+        };
+    } else {
+        // Fallback to treating as scalar
+        listItemType = createScalarType(itemType);
+    }
+    
     return {
-        type: createListType(createScalarType(itemType)),
+        type: createListType(listItemType),
         description: description,
         args: {}
     };
@@ -190,12 +207,26 @@ function NonNullListField(itemType, description) {
 /**
  * Create an Object field
  * @param {string} description - Field description
- * @param {Object} fields - Object fields
+ * @param {Object} objectType - Object type definition (from NewObjectType)
  * @returns {Object} Object field definition
  */
-function ObjectField(description, fields) {
+function ObjectField(description, objectType) {
+    let fieldType;
+    
+    if (objectType && objectType.typeName && objectType.fields) {
+        // Handle object types created by NewObjectType - use proper object structure
+        fieldType = {
+            kind: 'object',
+            name: objectType.typeName,
+            fields: objectType.fields
+        };
+    } else {
+        // Fallback to creating a generic object type
+        fieldType = createObjectType('Object', objectType);
+    }
+    
     return {
-        type: createObjectType('Object', fields),
+        type: fieldType,
         description: description,
         args: {}
     };
@@ -283,13 +314,25 @@ function NonNullArg(argType, description) {
 
 /**
  * Create a List argument
- * @param {string} itemType - Type of items in the list
+ * @param {string|Object} itemType - Type of items in the list (string for scalars, object for complex types)
  * @param {string} description - Argument description
  * @returns {Object} List argument definition
  */
 function ListArg(itemType, description) {
+    let listItemType;
+    
+    if (typeof itemType === 'string') {
+        // Scalar type like 'String', 'Int', etc.
+        listItemType = createScalarType(itemType);
+    } else if (typeof itemType === 'object' && itemType.type) {
+        // Complex type from ObjectArg, StringArg, etc.
+        listItemType = itemType.type;
+    } else {
+        throw new Error('ListArg: First parameter must be a string type or argument object');
+    }
+    
     return {
-        type: createListType(createScalarType(itemType)),
+        type: createListType(listItemType),
         description: description
     };
 }
@@ -302,8 +345,9 @@ function ListArg(itemType, description) {
  */
 function ObjectArg(description, properties) {
     return {
-        type: createObjectType('Object', properties),
-        description: description
+        type: 'Object',
+        description: description,
+        properties: properties
     };
 }
 
@@ -599,7 +643,13 @@ function getStringArg(args, key, defaultValue = '') {
  */
 function getIntArg(args, key, defaultValue = 0) {
     const value = args[key];
-    return typeof value === 'number' ? Math.floor(value) : defaultValue;
+    if (typeof value === 'number') {
+        return Math.floor(value);
+    } else if (typeof value === 'string') {
+        const parsed = parseInt(value, 10);
+        return !isNaN(parsed) ? parsed : defaultValue;
+    }
+    return defaultValue;
 }
 
 /**
@@ -623,7 +673,13 @@ function getBoolArg(args, key, defaultValue = false) {
  */
 function getFloatArg(args, key, defaultValue = 0.0) {
     const value = args[key];
-    return typeof value === 'number' ? value : defaultValue;
+    if (typeof value === 'number') {
+        return value;
+    } else if (typeof value === 'string') {
+        const parsed = parseFloat(value);
+        return !isNaN(parsed) ? parsed : defaultValue;
+    }
+    return defaultValue;
 }
 
 /**
