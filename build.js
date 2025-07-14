@@ -44,6 +44,14 @@ files.forEach(file => {
   }
 });
 
+// Copy plugin.proto file if it exists
+const protoFile = path.join(__dirname, 'plugin.proto');
+if (fs.existsSync(protoFile)) {
+  const destProtoFile = path.join(distDir, 'plugin.proto');
+  fs.copyFileSync(protoFile, destProtoFile);
+  console.log('📄 Copied plugin.proto to dist/');
+}
+
 function generateTypeDefinitions() {
   return `// Type definitions for @apito-io/js-apito-plugin-sdk
 // Generated automatically by build script

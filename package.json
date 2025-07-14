@@ -1,9 +1,14 @@
 {
   "name": "@apito-io/js-apito-plugin-sdk",
-  "version": "0.1.9",
+  "version": "0.2.0",
   "description": "JavaScript SDK for building Apito HashiCorp plugins",
   "main": "dist/main.js",
   "types": "dist/main.d.ts",
+  "files": [
+    "dist/",
+    "plugin.proto",
+    "README.md"
+  ],
   "scripts": {
     "build": "node build.js",
     "dev": "node build.js --dev",

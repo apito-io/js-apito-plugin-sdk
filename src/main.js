@@ -294,10 +294,12 @@ class Plugin {
     async loadProtoDefinition() {
         // Look for plugin.proto in various locations
         const protoPaths = [
-            path.join(__dirname, 'plugin.proto'),
-            path.join(__dirname, '..', 'buffers', 'plugin.proto'),
-            path.join(process.cwd(), 'plugin.proto'),
-            '/Users/diablo/go/src/gitlab.com/apito.io/buffers/plugin.proto'
+            path.join(__dirname, 'plugin.proto'),                                    // SDK package root
+            path.join(__dirname, '..', 'plugin.proto'),                             // Parent directory
+            path.join(__dirname, '..', '..', 'plugin.proto'),                       // Two levels up
+            path.join(__dirname, '..', 'buffers', 'plugin.proto'),                  // Buffers sibling
+            path.join(process.cwd(), 'plugin.proto'),                               // Current working directory
+            '/Users/diablo/go/src/gitlab.com/apito.io/buffers/plugin.proto'         // Absolute path
         ];
 
         let protoPath = null;
