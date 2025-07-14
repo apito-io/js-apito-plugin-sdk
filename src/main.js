@@ -515,89 +515,78 @@ class Plugin {
             const request = call.request;
             const functionName = request.function_name;
             const functionType = request.function_type;
+            
+            // Debug the raw protobuf request
+            process.stderr.write(`SDK: Raw request object: ${JSON.stringify(request, null, 2)}\n`);
+            process.stderr.write(`SDK: Raw args field: ${JSON.stringify(request.args, null, 2)}\n`);
+            process.stderr.write(`SDK: Raw context field: ${JSON.stringify(request.context, null, 2)}\n`);
+            
             const args = request.args ? this.structToObject(request.args) : {};
             const context = request.context ? this.structToObject(request.context) : {};
 
             process.stderr.write(`SDK: Executing ${functionType}:${functionName}\n`);
-            process.stderr.write(`SDK: Raw args: ${JSON.stringify(request.args, null, 2)}\n`);
             process.stderr.write(`SDK: Parsed args: ${JSON.stringify(args, null, 2)}\n`);
+            process.stderr.write(`SDK: Parsed context: ${JSON.stringify(context, null, 2)}\n`);
 
             let result;
             
-            if (functionType === 'graphql_query' || functionType === 'graphql_mutation') {
-                result = await this.handleGraphQLExecution(functionName, args, context);
-            } else if (functionType === 'function' || functionType === 'system') {
-                result = await this.handleFunctionExecution(functionName, args, context);
-            } else if (functionType === 'rest' || functionType === 'rest_api') {
-                result = await this.handleRESTExecution(functionName, args, context);
+            if (functionType === 'graphql_query') {
+                if (this.resolvers.has(functionName)) {
+                    process.stderr.write(`SDK: Calling query resolver for ${functionName}\n`);
+                    result = await this.resolvers.get(functionName)(context, args);
+                } else {
+                    throw new Error(`Query resolver not found: ${functionName}`);
+                }
+            } else if (functionType === 'graphql_mutation') {
+                if (this.resolvers.has(functionName)) {
+                    process.stderr.write(`SDK: Calling mutation resolver for ${functionName}\n`);
+                    result = await this.resolvers.get(functionName)(context, args);
+                } else {
+                    throw new Error(`Mutation resolver not found: ${functionName}`);
+                }
+            } else if (functionType === 'rest_api') {
+                if (this.restHandlers.has(functionName)) {
+                    process.stderr.write(`SDK: Calling REST handler for ${functionName}\n`);
+                    result = await this.restHandlers.get(functionName)(context, args);
+                } else {
+                    throw new Error(`REST handler not found: ${functionName}`);
+                }
+            } else if (functionType === 'custom_function') {
+                if (this.functions.has(functionName)) {
+                    process.stderr.write(`SDK: Calling custom function for ${functionName}\n`);
+                    result = await this.functions.get(functionName)(context, args);
+                } else {
+                    throw new Error(`Custom function not found: ${functionName}`);
+                }
             } else {
                 throw new Error(`Unknown function type: ${functionType}`);
             }
 
-            process.stderr.write(`SDK: Raw result: ${JSON.stringify(result, null, 2)}\n`);
+            process.stderr.write(`SDK: Resolver result: ${JSON.stringify(result, null, 2)}\n`);
 
-            // Create the result as a structpb.Struct with a 'data' field
-            // This matches what the Go plugins return and what the engine expects
-            const resultStruct = this.convertToProtobufStruct({ data: result });
+            // Convert result to protobuf format
+            const protobufResult = this.convertToProtobufStruct({ data: result });
+            process.stderr.write(`SDK: Protobuf result: ${JSON.stringify(protobufResult, null, 2)}\n`);
 
-            const response = {
+            callback(null, {
                 success: true,
-                message: 'Execution successful',
                 result: {
-                    type_url: 'type.googleapis.com/google.protobuf.Struct',
-                    value: Buffer.from(JSON.stringify(resultStruct))
-                }
-            };
+                    typeUrl: 'type.googleapis.com/google.protobuf.Struct',
+                    value: Buffer.from(JSON.stringify(protobufResult))
+                },
+                error: ''
+            });
 
-            callback(null, response);
         } catch (error) {
-            process.stderr.write(`SDK: Execute error: ${error}\n`);
+            process.stderr.write(`SDK: Error executing function: ${error.message}\n`);
+            process.stderr.write(`SDK: Error stack: ${error.stack}\n`);
+            
             callback(null, {
                 success: false,
-                message: `Execution failed: ${error.message}`,
-                result: null
+                result: null,
+                error: error.message
             });
         }
-    }
-
-    // Execution handlers
-    async handleGraphQLExecution(functionName, args, context) {
-        const resolver = this.resolvers.get(functionName);
-        if (!resolver) {
-            throw new Error(`Unknown GraphQL resolver: ${functionName}`);
-        }
-        return await resolver(context, args);
-    }
-
-    async handleFunctionExecution(functionName, args, context) {
-        const func = this.functions.get(functionName);
-        if (!func) {
-            throw new Error(`Unknown function: ${functionName}`);
-        }
-        return await func(context, args);
-    }
-
-    async handleRESTExecution(functionName, args, context) {
-        // Try direct handler name first
-        let handler = this.restHandlers.get(functionName);
-        
-        // If not found, try to convert from new format to old format
-        if (!handler && functionName.startsWith('rest_')) {
-            const parts = functionName.split('_');
-            if (parts.length >= 3) {
-                const method = parts[1].toUpperCase();
-                const pathParts = parts.slice(2);
-                const path = '/' + pathParts.join('/');
-                const oldFormatKey = `${method}_${path}`;
-                handler = this.restHandlers.get(oldFormatKey);
-            }
-        }
-
-        if (!handler) {
-            throw new Error(`Unknown REST handler: ${functionName}`);
-        }
-        
-        return await handler(context, args);
     }
 
     // Utility methods
@@ -612,29 +601,46 @@ class Plugin {
             return {};
         }
 
+        process.stderr.write(`SDK: Converting struct with fields: ${JSON.stringify(Object.keys(struct.fields))}\n`);
+        process.stderr.write(`SDK: Full struct object: ${JSON.stringify(struct, null, 2)}\n`);
+
         const result = {};
         for (const [key, value] of Object.entries(struct.fields)) {
+            process.stderr.write(`SDK: Converting field '${key}': ${JSON.stringify(value)}\n`);
             result[key] = this.valueToJS(value);
+            process.stderr.write(`SDK: Field '${key}' converted to: ${JSON.stringify(result[key])}\n`);
         }
+        
+        process.stderr.write(`SDK: Final converted object: ${JSON.stringify(result)}\n`);
         return result;
     }
 
     valueToJS(value) {
         if (!value) {
+            process.stderr.write(`SDK: valueToJS received null/undefined value\n`);
             return null;
         }
         
+        process.stderr.write(`SDK: Converting value: ${JSON.stringify(value)}\n`);
+        process.stderr.write(`SDK: Value keys: ${Object.keys(value)}\n`);
+        
         if (value.stringValue !== undefined) {
+            process.stderr.write(`SDK: Found stringValue: ${value.stringValue}\n`);
             return value.stringValue;
         } else if (value.numberValue !== undefined) {
+            process.stderr.write(`SDK: Found numberValue: ${value.numberValue}\n`);
             return value.numberValue;
         } else if (value.boolValue !== undefined) {
+            process.stderr.write(`SDK: Found boolValue: ${value.boolValue}\n`);
             return value.boolValue;
         } else if (value.structValue !== undefined) {
+            process.stderr.write(`SDK: Found structValue, recursing...\n`);
             return this.structToObject(value.structValue);
         } else if (value.listValue !== undefined && value.listValue.values) {
+            process.stderr.write(`SDK: Found listValue with ${value.listValue.values.length} items\n`);
             return value.listValue.values.map(v => this.valueToJS(v));
         } else if (value.nullValue !== undefined) {
+            process.stderr.write(`SDK: Found nullValue\n`);
             return null;
         } else {
             process.stderr.write(`SDK: Unknown value type: ${JSON.stringify(value)}\n`);
