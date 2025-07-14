@@ -88,7 +88,8 @@ class Plugin {
         field.resolve = name;
         this.queries.set(name, field);
         this.resolvers.set(name, resolver);
-        console.error(`SDK: Registered query '${name}'`);
+        // Use stderr for plugin logs to avoid interfering with stdout handshake
+        process.stderr.write(`SDK: Registered query '${name}'\n`);
     }
 
     /**
@@ -101,7 +102,7 @@ class Plugin {
         field.resolve = name;
         this.mutations.set(name, field);
         this.resolvers.set(name, resolver);
-        console.error(`SDK: Registered mutation '${name}'`);
+        process.stderr.write(`SDK: Registered mutation '${name}'\n`);
     }
 
     /**
@@ -139,7 +140,7 @@ class Plugin {
         endpoint.handler = `${endpoint.method}_${endpoint.path}`;
         this.restAPIs.push(endpoint);
         this.restHandlers.set(endpoint.handler, handler);
-        console.error(`SDK: Registered REST API ${endpoint.method} ${endpoint.path}`);
+        process.stderr.write(`SDK: Registered REST API ${endpoint.method} ${endpoint.path}\n`);
     }
 
     /**
@@ -163,7 +164,7 @@ class Plugin {
      */
     registerFunction(name, func) {
         this.functions.set(name, func);
-        console.error(`SDK: Registered function '${name}'`);
+        process.stderr.write(`SDK: Registered function '${name}'\n`);
     }
 
     /**
@@ -182,7 +183,7 @@ class Plugin {
      */
     registerHealthCheck(healthCheck) {
         this.healthChecks.push(healthCheck);
-        console.error(`SDK: Registered health check`);
+        process.stderr.write(`SDK: Registered health check\n`);
     }
 
     /**
@@ -247,6 +248,12 @@ class Plugin {
      * Start the plugin server
      */
     async serve() {
+        // Validate magic cookie first
+        if (!process.env.APITO_PLUGIN || process.env.APITO_PLUGIN !== 'apito_plugin_magic_cookie_v1') {
+            process.stderr.write('SDK: ERROR - Magic cookie not set or invalid. Expected APITO_PLUGIN=apito_plugin_magic_cookie_v1\n');
+            process.exit(1);
+        }
+
         try {
             // Load protobuf definition
             await this.loadProtoDefinition();
@@ -267,7 +274,7 @@ class Plugin {
             // Start server
             await this.startServer();
         } catch (error) {
-            console.error('SDK: Failed to start plugin server:', error);
+            process.stderr.write(`SDK: Failed to start plugin server: ${error}\n`);
             process.exit(1);
         }
     }
@@ -296,7 +303,7 @@ class Plugin {
             throw new Error('Could not find plugin.proto file');
         }
 
-        console.error(`SDK: Loading proto definition from: ${protoPath}`);
+        process.stderr.write(`SDK: Loading proto definition from: ${protoPath}\n`);
 
         const packageDefinition = protoLoader.loadSync(protoPath, {
             keepCase: true,
@@ -324,10 +331,13 @@ class Plugin {
                     return;
                 }
 
-                console.error(`SDK: Plugin server listening on port ${assignedPort}`);
+                // Start the server
+                this.server.start();
                 
-                // Output the handshake protocol for go-plugin
-                console.log(`1|1|tcp|127.0.0.1:${assignedPort}|grpc`);
+                process.stderr.write(`SDK: Plugin server listening on port ${assignedPort}\n`);
+                
+                // Output the handshake protocol for go-plugin to stdout (CRITICAL: no other stdout output before this)
+                process.stdout.write(`1|1|tcp|127.0.0.1:${assignedPort}|grpc\n`);
                 
                 // Handle graceful shutdown
                 this.setupGracefulShutdown();
@@ -342,14 +352,14 @@ class Plugin {
      */
     setupGracefulShutdown() {
         const shutdown = (signal) => {
-            console.error(`SDK: Received ${signal}, shutting down gracefully...`);
+            process.stderr.write(`SDK: Received ${signal}, shutting down gracefully...\n`);
             if (this.server) {
                 this.server.tryShutdown((err) => {
                     if (err) {
-                        console.error('SDK: Error during shutdown:', err);
+                        process.stderr.write(`SDK: Error during shutdown: ${err}\n`);
                         process.exit(1);
                     }
-                    console.error('SDK: Shutdown complete');
+                    process.stderr.write(`SDK: Shutdown complete\n`);
                     process.exit(0);
                 });
             } else {
@@ -363,7 +373,7 @@ class Plugin {
 
     // gRPC Service Handlers
     async handleInit(call, callback) {
-        console.error(`SDK: Initializing plugin '${this.name}'...`);
+        process.stderr.write(`SDK: Initializing plugin '${this.name}'...\n`);
         
         try {
             const request = call.request;
@@ -372,7 +382,7 @@ class Plugin {
             if (request.envVars) {
                 for (const env of request.envVars) {
                     process.env[env.key] = env.value;
-                    console.error(`SDK: Set env ${env.key}=${env.value}`);
+                    process.stderr.write(`SDK: Set env ${env.key}=${env.value}\n`);
                 }
             }
 
@@ -381,7 +391,7 @@ class Plugin {
                 message: `Plugin '${this.name}' initialized successfully`
             });
         } catch (error) {
-            console.error('SDK: Init error:', error);
+            process.stderr.write(`SDK: Init error: ${error}\n`);
             callback(null, {
                 success: false,
                 message: `Initialization failed: ${error.message}`
@@ -390,7 +400,7 @@ class Plugin {
     }
 
     async handleMigration(call, callback) {
-        console.error(`SDK: Running migration for plugin '${this.name}'...`);
+        process.stderr.write(`SDK: Running migration for plugin '${this.name}'...\n`);
         
         try {
             callback(null, {
@@ -398,7 +408,7 @@ class Plugin {
                 message: `No migration needed for plugin '${this.name}'`
             });
         } catch (error) {
-            console.error('SDK: Migration error:', error);
+            process.stderr.write(`SDK: Migration error: ${error}\n`);
             callback(null, {
                 success: false,
                 message: `Migration failed: ${error.message}`
@@ -407,7 +417,7 @@ class Plugin {
     }
 
     async handleSchemaRegister(call, callback) {
-        console.error(`SDK: Registering GraphQL schema for plugin '${this.name}'...`);
+        process.stderr.write(`SDK: Registering GraphQL schema for plugin '${this.name}'...\n`);
         
         try {
             // Convert Maps to objects for serialization
@@ -445,10 +455,10 @@ class Plugin {
                 subscriptions: convertToProtobufStruct({})
             };
 
-            console.error(`SDK: Registered ${this.queries.size} queries, ${this.mutations.size} mutations`);
+            process.stderr.write(`SDK: Registered ${this.queries.size} queries, ${this.mutations.size} mutations\n`);
             callback(null, { schema });
         } catch (error) {
-            console.error('SDK: Schema registration error:', error);
+            process.stderr.write(`SDK: Schema registration error: ${error}\n`);
             callback(null, {
                 schema: {
                     queries: convertToProtobufStruct({}),
@@ -460,7 +470,7 @@ class Plugin {
     }
 
     async handleRESTApiRegister(call, callback) {
-        console.error(`SDK: Registering REST APIs for plugin '${this.name}'...`);
+        process.stderr.write(`SDK: Registering REST APIs for plugin '${this.name}'...\n`);
         
         try {
             const apis = this.restAPIs.map(endpoint => ({
@@ -470,27 +480,27 @@ class Plugin {
                 schema: endpoint.schema || {}
             }));
 
-            console.error(`SDK: Registered ${apis.length} REST endpoints`);
+            process.stderr.write(`SDK: Registered ${apis.length} REST endpoints\n`);
             callback(null, { apis });
         } catch (error) {
-            console.error('SDK: REST API registration error:', error);
+            process.stderr.write(`SDK: REST API registration error: ${error}\n`);
             callback(null, { apis: [] });
         }
     }
 
     async handleGetVersion(call, callback) {
-        console.error(`SDK: Getting version for plugin '${this.name}'...`);
+        process.stderr.write(`SDK: Getting version for plugin '${this.name}'...\n`);
         
         try {
             callback(null, { version: this.version });
         } catch (error) {
-            console.error('SDK: Get version error:', error);
+            process.stderr.write(`SDK: Get version error: ${error}\n`);
             callback(null, { version: 'unknown' });
         }
     }
 
     async handleExecute(call, callback) {
-        console.error(`SDK: Executing function...`);
+        process.stderr.write(`SDK: Executing function...\n`);
         
         try {
             const request = call.request;
@@ -499,7 +509,7 @@ class Plugin {
             const args = request.args ? this.structToObject(request.args) : {};
             const context = request.context ? this.structToObject(request.context) : {};
 
-            console.error(`SDK: Executing ${functionType}:${functionName}`);
+            process.stderr.write(`SDK: Executing ${functionType}:${functionName}\n`);
 
             let result;
             
@@ -525,7 +535,7 @@ class Plugin {
 
             callback(null, response);
         } catch (error) {
-            console.error('SDK: Execute error:', error);
+            process.stderr.write(`SDK: Execute error: ${error}\n`);
             callback(null, {
                 success: false,
                 message: `Execution failed: ${error.message}`,
@@ -608,7 +618,8 @@ class Plugin {
 module.exports = {
     Plugin,
     init: function(name, version, apiKey) {
-        console.error(`SDK: Initializing plugin '${name}' v${version}`);
+        // Use stderr for initialization logs
+        process.stderr.write(`SDK: Initializing plugin '${name}' v${version}\n`);
         return new Plugin(name, version, apiKey);
     }
 };
