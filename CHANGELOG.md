@@ -5,9 +5,26 @@ All notable changes to the Apito JavaScript Plugin SDK will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] - 2025-01-15
+
+### Fixed
+
+- 🐛 **Critical Type System Bug** - Fixed missing `scalarType` field in protobuf serialization
+- ✅ **GraphQL Schema Registration** - Boolean, Int, Float, and other scalar types now properly register instead of defaulting to String
+- 🔧 **Argument Type Handling** - Query/mutation arguments now maintain correct types (Int arguments show as Int, not String)
+- 📋 **Schema Introspection** - GraphQL introspection now shows correct field types (e.g., `active: Boolean!` instead of `active: String!`)
+- 📖 **Documentation** - Fixed incorrect package name in README.md installation instructions
+
+### Technical Details
+
+- Added `scalarType` field to `convertTypeToProtobuf` method in main.js
+- This ensures the Go engine receives complete type information for proper GraphQL schema generation
+- Resolves issue where all plugin-defined types appeared as String in GraphQL schema
+
 ## [1.0.0] - 2024-07-14
 
 ### Added
+
 - 🎉 **Initial Release** - Complete JavaScript SDK for Apito Engine HashiCorp plugins
 - 🔌 **Plugin Class** - Core plugin functionality with clean API
 - 📝 **GraphQL Support** - Easy registration of queries, mutations, and resolvers
@@ -26,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔐 **Security** - Proper input validation and error boundaries
 
 ### Features
+
 - **Schema Registration**: GraphQL queries, mutations, and custom types
 - **REST APIs**: GET, POST, PUT, DELETE, PATCH endpoints with schemas
 - **Function Execution**: Custom business logic with context support
@@ -35,22 +53,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Developer Experience**: Clean API similar to Go SDK with JavaScript idioms
 
 ### Examples
+
 - **Simple Plugin**: Complete example demonstrating all SDK features
 - **Hello World Plugin**: Refactored from raw implementation to SDK usage
 - **Test Suite**: Comprehensive testing examples
 
 ### Documentation
+
 - **README**: Complete API documentation with examples
 - **Helpers Guide**: Detailed helper function documentation
 - **Examples**: Working plugin examples
 - **Test Coverage**: Full test suite with mocking examples
 
 ### Performance
+
 - **Memory Efficient**: Optimized object creation and cleanup
 - **Fast Startup**: Quick plugin initialization and registration
 - **Scalable**: Handles multiple concurrent requests efficiently
 
 ### Developer Tools
+
 - **Jest Testing**: Complete test framework integration
 - **ESLint Support**: Code quality and style checking
 - **TypeScript Ready**: Can be used with TypeScript projects
@@ -61,6 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Future Releases
 
 ### Planned Features
+
 - **TypeScript Support** - Native TypeScript definitions and examples
 - **Advanced Validation** - Schema validation and runtime type checking
 - **Middleware System** - Plugin middleware for request/response processing
@@ -71,10 +94,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Database Integrations** - Built-in database connection helpers
 
 ### Version Compatibility
+
 - **Engine Compatibility**: Works with Apito Engine v2.0+
 - **Node.js Support**: Node.js 16+ (recommended: Node.js 18+)
 - **gRPC Compatibility**: @grpc/grpc-js 1.8+
 
 ---
 
-*This SDK was created to provide JavaScript developers with the same clean, powerful plugin development experience available in the Go SDK. The transformation from raw plugin implementation to SDK usage reduces boilerplate code by ~80% while maintaining full feature parity.* 
+_This SDK was created to provide JavaScript developers with the same clean, powerful plugin development experience available in the Go SDK. The transformation from raw plugin implementation to SDK usage reduces boilerplate code by ~80% while maintaining full feature parity._

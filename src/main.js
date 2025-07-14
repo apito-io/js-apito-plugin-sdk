@@ -583,6 +583,13 @@ class Plugin {
                 };
             }
             
+            // CRITICAL FIX: Add scalarType field for scalar types
+            if (typeDef.scalarType) {
+                fields.scalarType = {
+                    stringValue: typeDef.scalarType
+                };
+            }
+            
             if (typeDef.ofType) {
                 fields.ofType = {
                     structValue: {
