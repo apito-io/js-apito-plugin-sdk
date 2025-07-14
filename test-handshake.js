@@ -24,7 +24,27 @@ const HANDSHAKE_PATTERN = /^1\|1\|tcp\|127\.0\.0\.1:\d+\|grpc\n?$/;
  * Create a minimal test plugin for handshake validation
  */
 function createTestPlugin() {
+    // Check if dist folder exists
+    const distPath = path.join(__dirname, 'dist');
+    if (!fs.existsSync(distPath)) {
+        throw new Error('dist/ folder not found. Please run "npm run build" first.');
+    }
+    
     const testPluginCode = `
+const path = require('path');
+const fs = require('fs');
+
+// Check if dist files exist
+const mainPath = path.join(__dirname, 'dist', 'main.js');
+const helpersPath = path.join(__dirname, 'dist', 'helpers.js');
+
+if (!fs.existsSync(mainPath)) {
+    throw new Error('dist/main.js not found. Build may have failed.');
+}
+if (!fs.existsSync(helpersPath)) {
+    throw new Error('dist/helpers.js not found. Build may have failed.');
+}
+
 const { init } = require('./dist/main.js');
 const { StringField } = require('./dist/helpers.js');
 
