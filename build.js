@@ -45,7 +45,7 @@ files.forEach(file => {
 });
 
 function generateTypeDefinitions() {
-  return `// Type definitions for @apito-io/js-apito-sdk
+  return `// Type definitions for @apito-io/js-apito-plugin-sdk
 // Generated automatically by build script
 
 export interface PluginConfig {

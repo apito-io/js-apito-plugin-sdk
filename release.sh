@@ -19,7 +19,7 @@ if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
   exit 1
 fi
 
-echo "🚀 Releasing @apito-io/js-apito-sdk version: $VERSION"
+echo "🚀 Releasing @apito-io/js-apito-plugin-sdk version: $VERSION"
 echo "📝 Commit message: $COMMIT_MSG"
 echo ""
 
@@ -56,5 +56,5 @@ git push && git push --tags
 echo ""
 echo "✅ Released version $VERSION successfully!"
 echo "🔄 The GitHub workflow will now build and publish to npm."
-echo "📦 Package: @apito-io/js-apito-sdk@$VERSION"
-echo "🌐 NPM: https://www.npmjs.com/package/@apito-io/js-apito-sdk" 
+echo "📦 Package: @apito-io/js-apito-plugin-sdk@$VERSION"
+echo "🌐 NPM: https://www.npmjs.com/package/@apito-io/js-apito-plugin-sdk" 
