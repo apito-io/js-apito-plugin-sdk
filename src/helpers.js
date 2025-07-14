@@ -80,17 +80,33 @@ function Field(fieldType, description) {
 
 /**
  * Create a GraphQL field with arguments
- * @param {string} fieldType - Field type
- * @param {string} description - Field description
- * @param {Object} args - Field arguments
+ * @param {string|Object} fieldType - Field type string or existing field object
+ * @param {string|Object} description - Field description or args object (if first param is field object)
+ * @param {Object} [args] - Field arguments (only used if first param is string)
  * @returns {Object} GraphQL field definition
  */
 function FieldWithArgs(fieldType, description, args) {
-    return {
-        type: createScalarType(fieldType),
-        description: description,
-        args: args || {}
-    };
+    // Handle two usage patterns:
+    // 1. FieldWithArgs('String', 'description', {args})
+    // 2. FieldWithArgs(StringField('description'), {args})
+    
+    if (typeof fieldType === 'string') {
+        // Pattern 1: Traditional usage
+        return {
+            type: createScalarType(fieldType),
+            description: description,
+            args: args || {}
+        };
+    } else if (typeof fieldType === 'object' && fieldType.type) {
+        // Pattern 2: Field object with args to add
+        return {
+            type: fieldType.type,
+            description: fieldType.description,
+            args: description || {}  // description parameter contains args in this pattern
+        };
+    } else {
+        throw new Error('FieldWithArgs: First parameter must be a string type or field object');
+    }
 }
 
 /**
