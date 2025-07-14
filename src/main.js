@@ -516,17 +516,16 @@ class Plugin {
             const functionName = request.function_name;
             const functionType = request.function_type;
             
-            // Debug the raw protobuf request
-            process.stderr.write(`SDK: Raw request object: ${JSON.stringify(request, null, 2)}\n`);
-            process.stderr.write(`SDK: Raw args field: ${JSON.stringify(request.args, null, 2)}\n`);
-            process.stderr.write(`SDK: Raw context field: ${JSON.stringify(request.context, null, 2)}\n`);
+            // Safe debug logging without JSON.stringify of complex objects
+            process.stderr.write(`SDK: Function: ${functionType}:${functionName}\n`);
+            process.stderr.write(`SDK: Has args: ${!!request.args}\n`);
+            process.stderr.write(`SDK: Has context: ${!!request.context}\n`);
             
             const args = request.args ? this.structToObject(request.args) : {};
             const context = request.context ? this.structToObject(request.context) : {};
 
-            process.stderr.write(`SDK: Executing ${functionType}:${functionName}\n`);
-            process.stderr.write(`SDK: Parsed args: ${JSON.stringify(args, null, 2)}\n`);
-            process.stderr.write(`SDK: Parsed context: ${JSON.stringify(context, null, 2)}\n`);
+            process.stderr.write(`SDK: Args keys: [${Object.keys(args).join(', ')}]\n`);
+            process.stderr.write(`SDK: Context keys: [${Object.keys(context).join(', ')}]\n`);
 
             let result;
             
@@ -562,11 +561,11 @@ class Plugin {
                 throw new Error(`Unknown function type: ${functionType}`);
             }
 
-            process.stderr.write(`SDK: Resolver result: ${JSON.stringify(result, null, 2)}\n`);
+            process.stderr.write(`SDK: Resolver returned: ${typeof result}\n`);
 
             // Convert result to protobuf format
             const protobufResult = this.convertToProtobufStruct({ data: result });
-            process.stderr.write(`SDK: Protobuf result: ${JSON.stringify(protobufResult, null, 2)}\n`);
+            process.stderr.write(`SDK: Converted to protobuf struct\n`);
 
             callback(null, {
                 success: true,
@@ -597,53 +596,48 @@ class Plugin {
         }
         
         if (!struct.fields) {
-            process.stderr.write(`SDK: structToObject received struct without fields: ${JSON.stringify(struct)}\n`);
+            process.stderr.write(`SDK: structToObject received struct without fields\n`);
             return {};
         }
 
-        process.stderr.write(`SDK: Converting struct with fields: ${JSON.stringify(Object.keys(struct.fields))}\n`);
-        process.stderr.write(`SDK: Full struct object: ${JSON.stringify(struct, null, 2)}\n`);
+        process.stderr.write(`SDK: Converting struct with ${Object.keys(struct.fields).length} fields: [${Object.keys(struct.fields).join(', ')}]\n`);
 
         const result = {};
         for (const [key, value] of Object.entries(struct.fields)) {
-            process.stderr.write(`SDK: Converting field '${key}': ${JSON.stringify(value)}\n`);
+            process.stderr.write(`SDK: Converting field '${key}'\n`);
             result[key] = this.valueToJS(value);
-            process.stderr.write(`SDK: Field '${key}' converted to: ${JSON.stringify(result[key])}\n`);
+            process.stderr.write(`SDK: Field '${key}' -> ${typeof result[key]}\n`);
         }
         
-        process.stderr.write(`SDK: Final converted object: ${JSON.stringify(result)}\n`);
+        process.stderr.write(`SDK: Converted object keys: [${Object.keys(result).join(', ')}]\n`);
         return result;
     }
 
     valueToJS(value) {
         if (!value) {
-            process.stderr.write(`SDK: valueToJS received null/undefined value\n`);
             return null;
         }
         
-        process.stderr.write(`SDK: Converting value: ${JSON.stringify(value)}\n`);
-        process.stderr.write(`SDK: Value keys: ${Object.keys(value)}\n`);
-        
         if (value.stringValue !== undefined) {
-            process.stderr.write(`SDK: Found stringValue: ${value.stringValue}\n`);
+            process.stderr.write(`SDK: String: "${value.stringValue}"\n`);
             return value.stringValue;
         } else if (value.numberValue !== undefined) {
-            process.stderr.write(`SDK: Found numberValue: ${value.numberValue}\n`);
+            process.stderr.write(`SDK: Number: ${value.numberValue}\n`);
             return value.numberValue;
         } else if (value.boolValue !== undefined) {
-            process.stderr.write(`SDK: Found boolValue: ${value.boolValue}\n`);
+            process.stderr.write(`SDK: Boolean: ${value.boolValue}\n`);
             return value.boolValue;
         } else if (value.structValue !== undefined) {
-            process.stderr.write(`SDK: Found structValue, recursing...\n`);
+            process.stderr.write(`SDK: Object (recursing)\n`);
             return this.structToObject(value.structValue);
         } else if (value.listValue !== undefined && value.listValue.values) {
-            process.stderr.write(`SDK: Found listValue with ${value.listValue.values.length} items\n`);
+            process.stderr.write(`SDK: Array[${value.listValue.values.length}]\n`);
             return value.listValue.values.map(v => this.valueToJS(v));
         } else if (value.nullValue !== undefined) {
-            process.stderr.write(`SDK: Found nullValue\n`);
+            process.stderr.write(`SDK: Null\n`);
             return null;
         } else {
-            process.stderr.write(`SDK: Unknown value type: ${JSON.stringify(value)}\n`);
+            process.stderr.write(`SDK: Unknown type: [${Object.keys(value).join(', ')}]\n`);
             return null;
         }
     }
