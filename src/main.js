@@ -435,27 +435,15 @@ class Plugin {
             const queriesObj = Object.fromEntries(this.queries);
             const mutationsObj = Object.fromEntries(this.mutations);
 
-            // Manual protobuf.Struct conversion
+            // Proper protobuf.Struct conversion that handles field definitions with arguments
             const convertToProtobufStruct = (data) => {
                 const fields = {};
                 for (const [key, value] of Object.entries(data)) {
                     fields[key] = {
                         structValue: {
-                            fields: {}
+                            fields: this.convertFieldToProtobuf(value)
                         }
                     };
-                    
-                    for (const [prop, propValue] of Object.entries(value)) {
-                        if (typeof propValue === 'string') {
-                            fields[key].structValue.fields[prop] = {
-                                stringValue: propValue
-                            };
-                        } else {
-                            fields[key].structValue.fields[prop] = {
-                                stringValue: JSON.stringify(propValue)
-                            };
-                        }
-                    }
                 }
                 return { fields };
             };
@@ -466,18 +454,162 @@ class Plugin {
                 subscriptions: convertToProtobufStruct({})
             };
 
+            // Debug logging to show schema structure
+            process.stderr.write(`SDK: DEBUG - Schema structure:\n`);
+            process.stderr.write(`SDK: DEBUG - Queries: ${JSON.stringify(schema.queries, null, 2)}\n`);
+            process.stderr.write(`SDK: DEBUG - Mutations: ${JSON.stringify(schema.mutations, null, 2)}\n`);
+
             process.stderr.write(`SDK: Registered ${this.queries.size} queries, ${this.mutations.size} mutations\n`);
             callback(null, { schema });
         } catch (error) {
             process.stderr.write(`SDK: Schema registration error: ${error}\n`);
+            // Fallback empty schema structure
+            const emptyStruct = { fields: {} };
             callback(null, {
                 schema: {
-                    queries: convertToProtobufStruct({}),
-                    mutations: convertToProtobufStruct({}),
-                    subscriptions: convertToProtobufStruct({})
+                    queries: emptyStruct,
+                    mutations: emptyStruct,
+                    subscriptions: emptyStruct
                 }
             });
         }
+    }
+
+    // Helper method to properly convert field definitions to protobuf format
+    convertFieldToProtobuf(fieldDef) {
+        const fields = {};
+        
+        // Convert basic field properties
+        if (fieldDef.type) {
+            fields.type = {
+                structValue: {
+                    fields: this.convertTypeToProtobuf(fieldDef.type)
+                }
+            };
+        }
+        
+        if (fieldDef.description) {
+            fields.description = {
+                stringValue: fieldDef.description
+            };
+        }
+        
+        // Convert arguments if they exist
+        if (fieldDef.args && Object.keys(fieldDef.args).length > 0) {
+            fields.args = {
+                structValue: {
+                    fields: this.convertArgsToProtobuf(fieldDef.args)
+                }
+            };
+        }
+        
+        // Add resolve property
+        if (fieldDef.resolve) {
+            fields.resolve = {
+                stringValue: fieldDef.resolve
+            };
+        }
+        
+        return fields;
+    }
+
+    // Helper method to convert argument definitions to protobuf format
+    convertArgsToProtobuf(args) {
+        const fields = {};
+        
+        for (const [argName, argDef] of Object.entries(args)) {
+            fields[argName] = {
+                structValue: {
+                    fields: {}
+                }
+            };
+            
+            // Convert argument type
+            if (argDef.type) {
+                fields[argName].structValue.fields.type = {
+                    structValue: {
+                        fields: this.convertTypeToProtobuf(argDef.type)
+                    }
+                };
+            }
+            
+            // Convert argument description
+            if (argDef.description) {
+                fields[argName].structValue.fields.description = {
+                    stringValue: argDef.description
+                };
+            }
+            
+            // Convert argument properties if they exist (for object types)
+            // Check both argDef.properties (direct) and argDef.type.fields (ObjectArg structure)
+            if (argDef.properties) {
+                fields[argName].structValue.fields.properties = {
+                    structValue: {
+                        fields: this.convertArgsToProtobuf(argDef.properties)
+                    }
+                };
+            } else if (argDef.type && argDef.type.fields) {
+                fields[argName].structValue.fields.properties = {
+                    structValue: {
+                        fields: this.convertArgsToProtobuf(argDef.type.fields)
+                    }
+                };
+            }
+        }
+        
+        return fields;
+    }
+
+    // Helper method to convert type definitions to protobuf format
+    convertTypeToProtobuf(typeDef) {
+        const fields = {};
+        
+        if (typeof typeDef === 'string') {
+            // Simple scalar type
+            fields.name = {
+                stringValue: typeDef
+            };
+        } else if (typeDef && typeof typeDef === 'object') {
+            // Complex type definition
+            if (typeDef.name) {
+                fields.name = {
+                    stringValue: typeDef.name
+                };
+            }
+            
+            if (typeDef.kind) {
+                fields.kind = {
+                    stringValue: typeDef.kind
+                };
+            }
+            
+            if (typeDef.ofType) {
+                fields.ofType = {
+                    structValue: {
+                        fields: this.convertTypeToProtobuf(typeDef.ofType)
+                    }
+                };
+            }
+            
+            // Handle custom object types with fields
+            if (typeDef.fields) {
+                fields.fields = {
+                    structValue: {
+                        fields: {}
+                    }
+                };
+                
+                for (const [fieldName, fieldDef] of Object.entries(typeDef.fields)) {
+                    fields.fields.structValue.fields[fieldName] = {
+                        structValue: {
+                            fields: this.convertFieldToProtobuf(fieldDef)
+                        }
+                    };
+                }
+            }
+        }
+        
+        return fields;
     }
 
     async handleRESTApiRegister(call, callback) {
@@ -558,6 +690,20 @@ class Plugin {
                     result = await this.functions.get(functionName)(context, args);
                 } else {
                     throw new Error(`Custom function not found: ${functionName}`);
+                }
+            } else if (functionType === 'system') {
+                // Handle system functions like health checks
+                process.stderr.write(`SDK: Handling system function: ${functionName}\n`);
+                if (functionName === 'health_check') {
+                    // Simple health check response
+                    result = {
+                        status: 'healthy',
+                        plugin: this.name,
+                        version: this.version,
+                        timestamp: new Date().toISOString()
+                    };
+                } else {
+                    throw new Error(`Unknown system function: ${functionName}`);
                 }
             } else {
                 throw new Error(`Unknown function type: ${functionType}`);
