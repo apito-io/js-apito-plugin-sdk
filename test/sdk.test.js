@@ -4,7 +4,7 @@
  * Comprehensive tests for the JavaScript SDK functionality.
  */
 
-const { init } = require('../main');
+const { init } = require('../src/main');
 const {
     StringField,
     FieldWithArgs,
@@ -27,7 +27,7 @@ const {
     createNonNullType,
     createListType,
     NewObjectType
-} = require('../helpers');
+} = require('../src/helpers');
 
 describe('Apito JavaScript Plugin SDK', () => {
     let plugin;

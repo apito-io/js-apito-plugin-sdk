@@ -1,8 +1,33 @@
 {
-  "name": "@apito/js-plugin-sdk",
-  "version": "1.0.0",
+  "name": "@apito-io/js-apito-sdk",
+  "version": "0.1.0",
   "description": "JavaScript SDK for building Apito Engine HashiCorp plugins with gRPC support",
-  "main": "main.js",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "examples/"
+  ],
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "scripts": {
+    "build": "node build.js",
+    "test": "jest",
+    "lint": "eslint src --ext .js",
+    "prepare": "npm run build",
+    "example": "node examples/simple-plugin/main.js"
+  },
   "author": "Apito Inc",
   "license": "MIT",
   "keywords": [
@@ -12,7 +37,9 @@
     "grpc",
     "hashicorp",
     "javascript",
-    "nodejs"
+    "nodejs",
+    "sdk",
+    "engine"
   ],
   "dependencies": {
     "@grpc/grpc-js": "^1.8.0",
@@ -22,23 +49,13 @@
     "jest": "^29.0.0",
     "eslint": "^8.0.0"
   },
-  "scripts": {
-    "test": "jest",
-    "lint": "eslint *.js",
-    "example": "node examples/simple-plugin/main.js"
-  },
-  "engines": {
-    "node": ">=16.0.0"
-  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/apito-io/js-apito-plugin-sdk"
+    "url": "https://github.com/apito-io/engine.git",
+    "directory": "js-apito-plugin-sdk"
   },
-  "files": [
-    "main.js",
-    "helpers.js",
-    "README.md",
-    "examples/",
-    "types.d.ts"
-  ]
+  "bugs": {
+    "url": "https://github.com/apito-io/engine/issues"
+  },
+  "homepage": "https://github.com/apito-io/engine/tree/main/js-apito-plugin-sdk#readme"
 }
