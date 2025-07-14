@@ -1,0 +1,27 @@
+{
+  "name": "simple-plugin-example",
+  "version": "1.0.0",
+  "description": "Simple example plugin using the Apito JavaScript Plugin SDK",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js",
+    "dev": "nodemon main.js",
+    "debug": "node --inspect main.js"
+  },
+  "dependencies": {
+    "@apito/js-plugin-sdk": "file:../../"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.0"
+  },
+  "keywords": [
+    "apito",
+    "plugin",
+    "example",
+    "javascript",
+    "graphql",
+    "grpc"
+  ],
+  "author": "Apito Team",
+  "license": "MIT"
+}

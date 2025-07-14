@@ -1,0 +1,44 @@
+{
+  "name": "@apito/js-plugin-sdk",
+  "version": "1.0.0",
+  "description": "JavaScript SDK for building Apito Engine HashiCorp plugins with gRPC support",
+  "main": "main.js",
+  "author": "Apito Inc",
+  "license": "MIT",
+  "keywords": [
+    "apito",
+    "plugin",
+    "graphql",
+    "grpc",
+    "hashicorp",
+    "javascript",
+    "nodejs"
+  ],
+  "dependencies": {
+    "@grpc/grpc-js": "^1.8.0",
+    "@grpc/proto-loader": "^0.7.0"
+  },
+  "devDependencies": {
+    "jest": "^29.0.0",
+    "eslint": "^8.0.0"
+  },
+  "scripts": {
+    "test": "jest",
+    "lint": "eslint *.js",
+    "example": "node examples/simple-plugin/main.js"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/apito-io/js-apito-plugin-sdk"
+  },
+  "files": [
+    "main.js",
+    "helpers.js",
+    "README.md",
+    "examples/",
+    "types.d.ts"
+  ]
+}
