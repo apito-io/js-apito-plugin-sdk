@@ -526,19 +526,28 @@ class Plugin {
                 result = await this.handleGraphQLExecution(functionName, args, context);
             } else if (functionType === 'function' || functionType === 'system') {
                 result = await this.handleFunctionExecution(functionName, args, context);
-            } else if (functionType === 'rest') {
+            } else if (functionType === 'rest' || functionType === 'rest_api') {
                 result = await this.handleRESTExecution(functionName, args, context);
             } else {
                 throw new Error(`Unknown function type: ${functionType}`);
             }
 
-            // Convert result to protobuf format
+            // Create the result as a structpb.Struct with a 'data' field
+            // This is what the engine expects to extract the actual result
+            const resultStruct = {
+                fields: {
+                    data: {
+                        stringValue: typeof result === 'string' ? result : JSON.stringify(result)
+                    }
+                }
+            };
+
             const response = {
                 success: true,
                 message: 'Execution successful',
                 result: {
-                    type_url: 'type.googleapis.com/google.protobuf.StringValue',
-                    value: Buffer.from(JSON.stringify(result))
+                    type_url: 'type.googleapis.com/google.protobuf.Struct',
+                    value: Buffer.from(JSON.stringify(resultStruct))
                 }
             };
 
