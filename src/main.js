@@ -750,11 +750,45 @@ class Plugin {
             process.stderr.write(`SDK: Error executing function: ${error.message}\n`);
             process.stderr.write(`SDK: Error stack: ${error.stack}\n`);
             
-            callback(null, {
-                success: false,
-                result: null,
-                error: error.message
-            });
+            // Check if this is a GraphQL operation and if the error is a GraphQL error
+            if ((functionType === 'graphql_query' || functionType === 'graphql_mutation') && this.isGraphQLError(error)) {
+                process.stderr.write(`SDK: Detected GraphQL error for ${functionType}\n`);
+                
+                // Convert GraphQL error to the format expected by the engine
+                const graphqlError = error.toJSON();
+                const graphqlErrors = [graphqlError];
+                
+                // Serialize GraphQL errors as JSON string for protobuf compatibility
+                const graphqlErrorsJSON = JSON.stringify(graphqlErrors);
+                
+                // Create the special GraphQL error response structure
+                const errorResult = {
+                    is_graphql_error: true,
+                    graphql_errors: graphqlErrorsJSON,
+                    data: null
+                };
+                
+                process.stderr.write(`SDK: Returning GraphQL error structure\n`);
+                
+                // Convert to protobuf format
+                const protobufResult = this.convertToProtobufStruct(errorResult);
+                
+                callback(null, {
+                    success: true, // Success in transport, but contains GraphQL error
+                    result: {
+                        typeUrl: 'type.googleapis.com/google.protobuf.Struct',
+                        value: Buffer.from(JSON.stringify(protobufResult))
+                    },
+                    error: ''
+                });
+            } else {
+                // Handle regular errors (REST, custom functions, or non-GraphQL errors)
+                callback(null, {
+                    success: false,
+                    result: null,
+                    error: error.message
+                });
+            }
         }
     }
 
@@ -845,6 +879,17 @@ class Plugin {
             // Fallback to string representation
             return { stringValue: String(value) };
         }
+    }
+
+    /**
+     * Check if an error is a GraphQL error
+     * @param {Error} error - Error to check
+     * @returns {boolean} True if error is a GraphQL error
+     */
+    isGraphQLError(error) {
+        // Import the GraphQLError class from helpers
+        const { GraphQLError } = require('./helpers');
+        return error instanceof GraphQLError;
     }
 }
 

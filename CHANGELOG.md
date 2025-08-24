@@ -5,6 +5,68 @@ All notable changes to the Apito JavaScript Plugin SDK will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4] - 2025-01-03
+
+### Added
+
+- **GraphQL Error Support** - Added comprehensive GraphQL error handling for proper error responses
+- **Error Types and Constructors** - Added GraphQLError class and error creation functions
+- **Structured Error Extensions** - Support for error codes, fields, and custom extension data
+- **Helper Functions** - Added convenience functions for throwing GraphQL errors from resolvers
+
+### New Error Functions
+
+**Error Constructors:**
+- `createGraphQLError()` - Create GraphQL error with extensions
+- `createValidationError()` - VALIDATION_ERROR with field support
+- `createAuthenticationError()` - UNAUTHENTICATED error
+- `createAuthorizationError()` - FORBIDDEN error
+- `createNotFoundError()` - NOT_FOUND error
+- `createInternalError()` - INTERNAL_ERROR for server errors
+- `createBadUserInputError()` - BAD_USER_INPUT with field support
+
+**Resolver Helper Functions:**
+- `throwValidationError()` - Throw validation error from resolver
+- `throwAuthenticationError()` - Throw auth error from resolver
+- `throwAuthorizationError()` - Throw authorization error from resolver
+- `throwNotFoundError()` - Throw not found error from resolver
+- `throwInternalError()` - Throw internal error from resolver
+- `throwBadUserInputError()` - Throw bad input error from resolver
+
+**Utility Functions:**
+- `isGraphQLError()` - Check if error is GraphQL error
+- `validateRequired()` - Validate required fields with auto-error
+- `validateField()` - Custom field validation with auto-error
+- `handleGraphQLErrors()` - Convert promise errors to GraphQL errors
+
+### Enhanced Error Handling
+
+- **GraphQL Operations** - Errors in GraphQL queries/mutations now return proper GraphQL error structure
+- **Protobuf Compatibility** - GraphQL errors are serialized as JSON strings for transport
+- **Engine Integration** - Engine detects `is_graphql_error` flag and formats errors properly
+- **Backward Compatibility** - Non-GraphQL operations continue to use existing error handling
+
+### Usage Examples
+
+```javascript
+// Throw validation error from resolver
+if (!tenantId) {
+    throwValidationError('Tenant ID is required', 'tenant_id');
+}
+
+// Throw authorization error
+if (!hasPermission) {
+    throwAuthorizationError('You cannot change other employees passwords');
+}
+
+// Create custom GraphQL error
+throw createGraphQLErrorWithCode('Custom error', 'CUSTOM_CODE', { userId: 123 });
+```
+
+### Breaking Changes
+
+None - This is a fully backward-compatible addition. Existing error handling continues to work unchanged.
+
 ## [0.2.3] - 2025-01-15
 
 ### Fixed

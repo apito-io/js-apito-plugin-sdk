@@ -746,6 +746,245 @@ function getBodyParam(args, param) {
     return body[param];
 }
 
+// ==============================================
+// GRAPHQL ERROR HANDLING
+// ==============================================
+
+/**
+ * GraphQL Error class for representing structured GraphQL errors
+ */
+class GraphQLError extends Error {
+    constructor(message, extensions = null, path = null, locations = null) {
+        super(message);
+        this.name = 'GraphQLError';
+        this.message = message;
+        this.extensions = extensions;
+        this.path = path;
+        this.locations = locations;
+    }
+
+    toJSON() {
+        const obj = { message: this.message };
+        if (this.extensions) obj.extensions = this.extensions;
+        if (this.path) obj.path = this.path;
+        if (this.locations) obj.locations = this.locations;
+        return obj;
+    }
+}
+
+/**
+ * Create a GraphQL error with message and optional extensions
+ * @param {string} message - Error message
+ * @param {Object} [extensions] - Error extensions (code, field, etc.)
+ * @param {Array} [path] - GraphQL path where error occurred
+ * @param {Array} [locations] - GraphQL source locations
+ * @returns {GraphQLError} GraphQL error instance
+ */
+function createGraphQLError(message, extensions = null, path = null, locations = null) {
+    return new GraphQLError(message, extensions, path, locations);
+}
+
+/**
+ * Create a GraphQL error with a specific error code
+ * @param {string} message - Error message
+ * @param {string} code - Error code (e.g., 'VALIDATION_ERROR', 'AUTHENTICATION_ERROR')
+ * @param {Object} [additionalExtensions] - Additional extension fields
+ * @returns {GraphQLError} GraphQL error instance
+ */
+function createGraphQLErrorWithCode(message, code, additionalExtensions = {}) {
+    const extensions = { code, ...additionalExtensions };
+    return new GraphQLError(message, extensions);
+}
+
+/**
+ * Create a validation error for GraphQL operations
+ * @param {string} message - Error message
+ * @param {string} [field] - Field that failed validation
+ * @returns {GraphQLError} Validation error instance
+ */
+function createValidationError(message, field = null) {
+    const extensions = { code: 'VALIDATION_ERROR' };
+    if (field) extensions.field = field;
+    return new GraphQLError(message, extensions);
+}
+
+/**
+ * Create an authentication error for GraphQL operations
+ * @param {string} [message] - Error message
+ * @returns {GraphQLError} Authentication error instance
+ */
+function createAuthenticationError(message = 'Authentication required') {
+    return new GraphQLError(message, { code: 'UNAUTHENTICATED' });
+}
+
+/**
+ * Create an authorization error for GraphQL operations
+ * @param {string} [message] - Error message
+ * @returns {GraphQLError} Authorization error instance
+ */
+function createAuthorizationError(message = 'Access denied') {
+    return new GraphQLError(message, { code: 'FORBIDDEN' });
+}
+
+/**
+ * Create a not found error for GraphQL operations
+ * @param {string} [message] - Error message
+ * @param {string} [resource] - Resource that was not found
+ * @returns {GraphQLError} Not found error instance
+ */
+function createNotFoundError(message = 'Resource not found', resource = null) {
+    const extensions = { code: 'NOT_FOUND' };
+    if (resource) extensions.resource = resource;
+    return new GraphQLError(message, extensions);
+}
+
+/**
+ * Create an internal server error for GraphQL operations
+ * @param {string} [message] - Error message
+ * @returns {GraphQLError} Internal error instance
+ */
+function createInternalError(message = 'Internal server error') {
+    return new GraphQLError(message, { code: 'INTERNAL_ERROR' });
+}
+
+/**
+ * Create a bad user input error for GraphQL operations
+ * @param {string} message - Error message
+ * @param {string} [field] - Field with bad input
+ * @returns {GraphQLError} Bad input error instance
+ */
+function createBadUserInputError(message, field = null) {
+    const extensions = { code: 'BAD_USER_INPUT' };
+    if (field) extensions.field = field;
+    return new GraphQLError(message, extensions);
+}
+
+// ==============================================
+// GRAPHQL ERROR HELPER FUNCTIONS FOR RESOLVERS
+// ==============================================
+
+/**
+ * Throw a GraphQL error (to be caught and handled by resolver)
+ * @param {string} message - Error message
+ * @param {Object} [extensions] - Error extensions
+ * @throws {GraphQLError} The GraphQL error
+ */
+function throwGraphQLError(message, extensions = null) {
+    throw new GraphQLError(message, extensions);
+}
+
+/**
+ * Throw a validation error
+ * @param {string} message - Error message
+ * @param {string} [field] - Field that failed validation
+ * @throws {GraphQLError} Validation error
+ */
+function throwValidationError(message, field = null) {
+    throw createValidationError(message, field);
+}
+
+/**
+ * Throw an authentication error
+ * @param {string} [message] - Error message
+ * @throws {GraphQLError} Authentication error
+ */
+function throwAuthenticationError(message = 'Authentication required') {
+    throw createAuthenticationError(message);
+}
+
+/**
+ * Throw an authorization error
+ * @param {string} [message] - Error message
+ * @throws {GraphQLError} Authorization error
+ */
+function throwAuthorizationError(message = 'Access denied') {
+    throw createAuthorizationError(message);
+}
+
+/**
+ * Throw a not found error
+ * @param {string} [message] - Error message
+ * @param {string} [resource] - Resource that was not found
+ * @throws {GraphQLError} Not found error
+ */
+function throwNotFoundError(message = 'Resource not found', resource = null) {
+    throw createNotFoundError(message, resource);
+}
+
+/**
+ * Throw an internal server error
+ * @param {string} [message] - Error message
+ * @throws {GraphQLError} Internal error
+ */
+function throwInternalError(message = 'Internal server error') {
+    throw createInternalError(message);
+}
+
+/**
+ * Throw a bad user input error
+ * @param {string} message - Error message
+ * @param {string} [field] - Field with bad input
+ * @throws {GraphQLError} Bad input error
+ */
+function throwBadUserInputError(message, field = null) {
+    throw createBadUserInputError(message, field);
+}
+
+/**
+ * Check if an error is a GraphQL error
+ * @param {Error} error - Error to check
+ * @returns {boolean} True if error is a GraphQL error
+ */
+function isGraphQLError(error) {
+    return error instanceof GraphQLError;
+}
+
+/**
+ * Validate a required field and throw validation error if missing
+ * @param {any} value - Value to validate
+ * @param {string} fieldName - Name of the field
+ * @param {string} [customMessage] - Custom error message
+ * @throws {GraphQLError} Validation error if value is missing
+ */
+function validateRequired(value, fieldName, customMessage = null) {
+    if (value === null || value === undefined || value === '') {
+        const message = customMessage || `${fieldName} is required`;
+        throwValidationError(message, fieldName);
+    }
+}
+
+/**
+ * Validate a field and throw error if validation fails
+ * @param {any} value - Value to validate
+ * @param {Function} validator - Validation function that returns true if valid
+ * @param {string} message - Error message if validation fails
+ * @param {string} [field] - Field name
+ * @throws {GraphQLError} Validation error if validation fails
+ */
+function validateField(value, validator, message, field = null) {
+    if (!validator(value)) {
+        throwValidationError(message, field);
+    }
+}
+
+/**
+ * Handle a promise and convert any errors to GraphQL errors
+ * @param {Promise} promise - Promise to handle
+ * @param {string} [fallbackMessage] - Fallback error message
+ * @returns {Promise} Promise that rejects with GraphQL errors
+ */
+async function handleGraphQLErrors(promise, fallbackMessage = 'An error occurred') {
+    try {
+        return await promise;
+    } catch (error) {
+        if (isGraphQLError(error)) {
+            throw error;
+        }
+        // Convert generic errors to internal GraphQL errors
+        throw createInternalError(fallbackMessage);
+    }
+}
+
 // Export all helper functions
 module.exports = {
     // Type creators
@@ -806,5 +1045,29 @@ module.exports = {
     logRESTArgs,
     getPathParam,
     getQueryParam,
-    getBodyParam
+    getBodyParam,
+    
+    // GraphQL Error types and constructors
+    GraphQLError,
+    createGraphQLError,
+    createGraphQLErrorWithCode,
+    createValidationError,
+    createAuthenticationError,
+    createAuthorizationError,
+    createNotFoundError,
+    createInternalError,
+    createBadUserInputError,
+    
+    // GraphQL Error helper functions for resolvers
+    throwGraphQLError,
+    throwValidationError,
+    throwAuthenticationError,
+    throwAuthorizationError,
+    throwNotFoundError,
+    throwInternalError,
+    throwBadUserInputError,
+    isGraphQLError,
+    validateRequired,
+    validateField,
+    handleGraphQLErrors
 }; 

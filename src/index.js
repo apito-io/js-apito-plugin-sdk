@@ -57,7 +57,31 @@ const {
   getPathParam,
   getQueryParam,
   getBodyParam,
-  logRESTArgs
+  logRESTArgs,
+  
+  // GraphQL Error types and constructors
+  GraphQLError,
+  createGraphQLError,
+  createGraphQLErrorWithCode,
+  createValidationError,
+  createAuthenticationError,
+  createAuthorizationError,
+  createNotFoundError,
+  createInternalError,
+  createBadUserInputError,
+  
+  // GraphQL Error helper functions for resolvers
+  throwGraphQLError,
+  throwValidationError,
+  throwAuthenticationError,
+  throwAuthorizationError,
+  throwNotFoundError,
+  throwInternalError,
+  throwBadUserInputError,
+  isGraphQLError,
+  validateRequired,
+  validateField,
+  handleGraphQLErrors
 } = require('./helpers');
 
 module.exports = {
@@ -119,5 +143,29 @@ module.exports = {
   getPathParam,
   getQueryParam,
   getBodyParam,
-  logRESTArgs
+  logRESTArgs,
+  
+  // GraphQL Error types and constructors
+  GraphQLError,
+  createGraphQLError,
+  createGraphQLErrorWithCode,
+  createValidationError,
+  createAuthenticationError,
+  createAuthorizationError,
+  createNotFoundError,
+  createInternalError,
+  createBadUserInputError,
+  
+  // GraphQL Error helper functions for resolvers
+  throwGraphQLError,
+  throwValidationError,
+  throwAuthenticationError,
+  throwAuthorizationError,
+  throwNotFoundError,
+  throwInternalError,
+  throwBadUserInputError,
+  isGraphQLError,
+  validateRequired,
+  validateField,
+  handleGraphQLErrors
 }; 
